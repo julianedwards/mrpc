@@ -82,6 +82,17 @@ func (s *OpScope) Validate() error {
 		}
 
 		return nil
+	case OP_MSG:
+		if s.Context == "" {
+			return errors.New("op msg operations must specify an operation context")
+		}
+
+		if s.Command != "" {
+			return errors.New("op msg operations must specify an identifier")
+		}
+
+		return nil
+
 	default:
 		return errors.New("must specify a valid request op type")
 	}

@@ -53,10 +53,12 @@ type Reply struct {
 }
 
 type Message struct {
-	Command  string
-	DB       string
-	Document bson.Simple
-	Items    []SequenceItem
+	Database   string
+	Collection string
+	Operation  string
+	MoreToCome bool
+	Checksum   bool
+	Items      []SequenceItem
 }
 
 type SequenceItem struct {

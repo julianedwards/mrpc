@@ -116,16 +116,11 @@ type commandReplyMessage struct {
 type opMessage struct {
 	header MessageHeader
 
-	Flag     uinit32
-	Document bson.Simple
+	Flags    uint32
 	Items    []opMessageSection
 	Checksum uint32
-}
 
-type opMessageSection struct {
-	Size      int32
-	Identifer string
-	Documents []bson.Simple
+	// will likely contain additional fields.
 }
 
 func GetModel(m Message) (interface{}, OpType) {
@@ -139,6 +134,25 @@ func GetModel(m Message) (interface{}, OpType) {
 			Inputs:             m.InputDocs,
 			ConvertedFromQuery: m.upconverted,
 		}, OP_COMMAND
+	case *opMessage:
+		msg := &model.Message{
+			Items:      m.Items,
+			Database:   m.database(),
+			Collection: m.collection(),
+			Operation:  m.operation(),
+		}
+
+		switch {
+		case 0:
+			msg.Checksum = true
+		case 1:
+			msg.MoreToCome = true
+		case 3:
+			msg.Checksum = true
+			msg.MoreToCome = true
+		}
+
+		return msg, OP_MSG
 	case *deleteMessage:
 		return &model.Delete{
 			Namespace: m.Namespace,
