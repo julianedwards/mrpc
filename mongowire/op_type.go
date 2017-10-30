@@ -4,7 +4,6 @@ type OpType int32
 
 const (
 	OP_REPLY         OpType = 1
-	OP_MSG                  = 1000
 	OP_UPDATE               = 2001
 	OP_INSERT               = 2002
 	RESERVED                = 2003
@@ -14,14 +13,13 @@ const (
 	OP_KILL_CURSORS         = 2007
 	OP_COMMAND              = 2010
 	OP_COMMAND_REPLY        = 2011
+	OP_MSG                  = 2013
 )
 
 func (op OpType) String() string {
 	switch op {
 	case OP_REPLY:
 		return "OP_REPLY"
-	case OP_MSG:
-		return "OP_MSG"
 	case OP_UPDATE:
 		return "OP_UPDATE"
 	case OP_INSERT:
@@ -40,6 +38,8 @@ func (op OpType) String() string {
 		return "OP_COMMAND"
 	case OP_COMMAND_REPLY:
 		return "OP_COMMAND_REPLY"
+	case OP_MSG:
+		return "OP_MSG"
 	default:
 		return ""
 	}

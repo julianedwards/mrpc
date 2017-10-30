@@ -112,6 +112,22 @@ type commandReplyMessage struct {
 	OutputDocs   []bson.Simple
 }
 
+// OP_MSG
+type opMessage struct {
+	header MessageHeader
+
+	Flag     uinit32
+	Document bson.Simple
+	Items    []opMessageSection
+	Checksum uint32
+}
+
+type opMessageSection struct {
+	Size      int32
+	Identifer string
+	Documents []bson.Simple
+}
+
 func GetModel(m Message) (interface{}, OpType) {
 	switch m := m.(type) {
 	case *commandMessage:

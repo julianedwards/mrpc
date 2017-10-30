@@ -51,3 +51,15 @@ type Reply struct {
 	CursorNotFound bool
 	QueryFailure   bool
 }
+
+type Message struct {
+	Command  string
+	DB       string
+	Document bson.Simple
+	Items    []SequenceItem
+}
+
+type SequenceItem struct {
+	Identifer string
+	Documents []bson.Simple
+}
