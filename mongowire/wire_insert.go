@@ -6,7 +6,7 @@ import (
 	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewInsertM(ns string, docs ...bson.Simple) Message {
+func NewInsert(ns string, docs ...bson.Simple) Message {
 	return &insertMessage{
 		header: MessageHeader{
 			RequestID: 19,

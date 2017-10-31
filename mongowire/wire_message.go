@@ -10,13 +10,25 @@ type opMessageSection interface {
 	Type() uint8
 	Name() string
 	DB() string
-	Collection() string
 	Documents() []bson.Simple
+	Serialize() []byte
 }
 
 type opMessagePayloadType0 struct {
 	PayloadType uint8
 	Document    bson.Simple
+}
+
+func (p *opMessagePayloadType0) Type() uint8              { return 0 }
+func (p *opMessagePayloadType0) Name() string             { return "" }
+func (p *opMessagePayloadType0) Documents() []bson.Simple { return []bson.Simple{p.Document} }
+func (p *opMessagePayloadType0) DB() string {
+	m, err := sec.Document.ToBSONM()
+	if err != nil {
+		return ""
+	}
+
+	return m["$db"]
 }
 
 type opMessagePayloadType1 struct {
@@ -26,25 +38,43 @@ type opMessagePayloadType1 struct {
 	Documents   []bson.Simple
 }
 
+func (p *opMessagePayloadType1) Type() uint8              { return 1 }
+func (p *opMessagePayloadType1) Name() string             { return p.Identifer }
+func (p *opMessagePayloadType1) DB() string               { return "" }
+func (p *opMessagePayloadType1) Documents() []bson.Simple { return p.Documents }
+
+func (m *opMessage) Header() MessageHeader { return m.header }
+func (m *opMessage) HasResponse() bool     { return m.Flags > 1 }
+func (m *opMessage) Scope() *OpScope {
+	s := &OpScope{
+		Type: m.header.OpCode,
+	}
+
+	for _, sec := range m.Items {
+		if sec.Type() == 0 {
+			s.Context = sec.DB()
+			if s.Context == "" {
+				continue
+			}
+			break
+		}
+
+		if sec.Type() == 1 {
+			s.Command = sec.Name()
+		}
+	}
+
+	return nil
+}
+
+func (m *opMessage) Serialize() []byte {
+
+}
+
 // TODO:
-//   - implement section interface for payload type 0
-//      - Type
-//      - Name
-//      - DB
-//      - Collection
-//      - Documents
-//   - implement section interface for payload type 1
-//      - Type
-//      - Name
-//      - DB
-//      - Collection
-//      - Documents
 //   - finish implementation of parseMsgMessageBody
 //   - implement message interface
-//      - Header
 //      - Serialize
-//      - HasResponse
-//      - Scope
 
 func NewOpMessage(moreToCome bool, document bson.Simple, items ...model.SequenceItem) Message {
 	msg := &opMessage{
