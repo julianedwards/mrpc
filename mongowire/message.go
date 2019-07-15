@@ -104,8 +104,8 @@ type commandMessage struct {
 }
 
 // OP_COMMAND_REPLY
-type commandReplyMessage struct {
-	header MessageHeader
+type CommandReplyMessage struct {
+	CommandReplyHeader MessageHeader
 
 	CommandReply bson.Simple
 	Metadata     bson.Simple
