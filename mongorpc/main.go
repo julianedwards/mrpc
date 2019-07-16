@@ -22,7 +22,6 @@ func main() {
         Type:    mongowire.OP_QUERY,
         Context: "test.$cmd",
     }, func(ctx context.Context, w io.Writer, msg mongowire.Message) {
-        _, _ = pp.Print(msg.Header())
     }); err != nil {
         grip.Error(err)
         return
@@ -34,11 +33,31 @@ func main() {
         Context: "admin",
         Command: "isMaster",
     }, func(ctx context.Context, w io.Writer, msg mongowire.Message) {
-				requestHeader := msg.Header()
-        _, _ = pp.Print(requestHeader)
-				isMaster := bsonx.EC.Int32("ok", 1)
+				// requestHeader := msg.Header()
+				isOk := bsonx.EC.Int32("ok", 1)
 
-				doc := bsonx.NewDocument(isMaster)
+				doc := bsonx.NewDocument(isOk)
+				docBytes, err := doc.MarshalBSON()
+				docSimple := bson.Simple{BSON: docBytes, Size: int32(len(docBytes))}
+        _, _ = pp.Print(err)
+
+				newReply := mongowire.NewReply(0, 0, 0, 1, []bson.Simple{docSimple}) 
+				w.Write(newReply.Serialize())
+    }); err != nil {
+        grip.Error(err)
+        return
+    }
+
+    // db.whatsmyuri()
+    if err := srv.RegisterOperation(&mongowire.OpScope{
+        Type:    mongowire.OP_COMMAND,
+        Context: "admin",
+        Command: "whatsmyuri",
+    }, func(ctx context.Context, w io.Writer, msg mongowire.Message) {
+				// requestHeader := msg.Header()
+				myUri := bsonx.EC.String("you", "localhost:12345")
+
+				doc := bsonx.NewDocument(myUri)
 				docBytes, err := doc.MarshalBSON()
 				docSimple := bson.Simple{BSON: docBytes, Size: int32(len(docBytes))}
         _, _ = pp.Print(err)

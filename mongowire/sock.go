@@ -3,12 +3,14 @@ package mongowire
 import (
 	"io"
 
+	"github.com/k0kubun/pp"
 	"github.com/pkg/errors"
 )
 
 const MaxInt32 = 2147483647
 
 func ReadMessage(reader io.Reader) (Message, error) {
+	pp.Print("beginning of message")
 	// read header
 	sizeBuf := make([]byte, 4)
 	n, err := reader.Read(sizeBuf)
@@ -52,6 +54,8 @@ func ReadMessage(reader io.Reader) (Message, error) {
 	header.RequestID = readInt32(restBuf)
 	header.ResponseTo = readInt32(restBuf[4:])
 	header.OpCode = OpType(readInt32(restBuf[8:]))
+	pp.Print("inside request")
+	pp.Print(header)
 
 	return header.Parse(restBuf[12:])
 }
