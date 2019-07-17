@@ -25,8 +25,9 @@ func handleBuildInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
 }
 
 func handleGetLog(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	logs := bsonx.EC.String("logs", "hello")
-	doc := bsonx.NewDocument(logs)
+	logs := bsonx.EC.ArrayFromElements("log", bsonx.VC.ArrayFromValues(bsonx.VC.String("hello")))
+	ok := bsonx.EC.Int32("ok", 1)
+	doc := bsonx.NewDocument(ok, logs)
 	grip.Error(errors.Wrap(writeReply(doc, w), "could not make response to getLog"))
 }
 
@@ -34,6 +35,18 @@ func handleGetFreeMonitoringStatus(ctx context.Context, w io.Writer, msg mongowi
 	ok := bsonx.EC.Int32("ok", 0)
 	doc := bsonx.NewDocument(ok)
 	grip.Error(errors.Wrap(writeReply(doc, w), "could not make response to getFreeMonitoringStatus"))
+}
+
+func handleReplSetGetStatus(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	ok := bsonx.EC.Int32("ok", 0)
+	doc := bsonx.NewDocument(ok)
+	grip.Error(errors.Wrap(writeReply(doc, w), "could not make response to replSetGetStatus"))
+}
+
+func handleListCollections(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	ok := bsonx.EC.Int32("ok", 0)
+	doc := bsonx.NewDocument(ok)
+	grip.Error(errors.Wrap(writeReply(doc, w), "could not make response to listCollections"))
 }
 
 func writeReply(doc *bsonx.Document, w io.Writer) error {
@@ -82,7 +95,7 @@ func main() {
 		return
 	}
 
-	// db.runCommand({whatsmyuri: 1})
+	// whatsmyuri
 	if err := srv.RegisterOperation(&mongowire.OpScope{
 		Type:    mongowire.OP_COMMAND,
 		Context: "admin",
@@ -96,7 +109,7 @@ func main() {
 		return
 	}
 
-	// db.runCommand({buildinfo: 1})
+	// buildInfo
 	if err := srv.RegisterOperation(&mongowire.OpScope{
 		Type:    mongowire.OP_COMMAND,
 		Context: "admin",
@@ -115,7 +128,7 @@ func main() {
 		return
 	}
 
-	// db.runCommand({getLog: 1})
+	// getLog
 	if err := srv.RegisterOperation(&mongowire.OpScope{
 		Type:    mongowire.OP_COMMAND,
 		Context: "admin",
@@ -134,13 +147,33 @@ func main() {
 		return
 	}
 
-	// db.runCommand({getFreeMonitoringStatus: 1})
+	// getFreeMonitoringStatus
 	if err := srv.RegisterOperation(&mongowire.OpScope{
 		Type:    mongowire.OP_COMMAND,
 		Context: "admin",
 		Command: "getFreeMonitoringStatus",
 	}, handleGetFreeMonitoringStatus); err != nil {
 		grip.Error(errors.Wrap(err, "could not register handler for getFreeMonitoringStatus"))
+		return
+	}
+
+	// replSetGetStatus
+	if err := srv.RegisterOperation(&mongowire.OpScope{
+		Type:    mongowire.OP_COMMAND,
+		Context: "admin",
+		Command: "replSetGetStatus",
+	}, handleReplSetGetStatus); err != nil {
+		grip.Error(errors.Wrap(err, "could not register handler for replSetGetStatus"))
+		return
+	}
+
+	// listCollections
+	if err := srv.RegisterOperation(&mongowire.OpScope{
+		Type:    mongowire.OP_COMMAND,
+		Context: "test",
+		Command: "listCollections",
+	}, handleListCollections); err != nil {
+		grip.Error(errors.Wrap(err, "could not register handler for listCollections"))
 		return
 	}
 
