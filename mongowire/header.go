@@ -42,7 +42,7 @@ func (h *MessageHeader) Parse(body []byte) (Message, error) {
 	case OP_COMMAND_REPLY:
 		m, err = h.parseCommandReplyMessage(body)
 	case OP_MSG:
-		m, err = h.parseMsgMessageBody(body)
+		m, err = h.parseMsgBody(body)
 	default:
 		return nil, errors.Errorf("unknown op code: %s", h.OpCode)
 	}

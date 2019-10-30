@@ -116,7 +116,7 @@ type commandReplyMessage struct {
 type opMessage struct {
 	header MessageHeader
 
-	Flags      int32
+	Flags      uint32
 	DB         string
 	Collection string
 	Operation  string

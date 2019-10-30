@@ -62,6 +62,6 @@ type Message struct {
 }
 
 type SequenceItem struct {
-	Identifer string
-	Documents []*bsonx.Document
+	Identifier string
+	Documents  []*bsonx.Document
 }

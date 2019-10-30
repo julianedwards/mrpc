@@ -40,12 +40,12 @@ func (p *opMessagePayloadType0) DB() string {
 type opMessagePayloadType1 struct {
 	PayloadType uint8
 	Size        int32
-	Identifer   string
+	Identifier  string
 	Payload     []*bsonx.Document
 }
 
 func (p *opMessagePayloadType1) Type() uint8                  { return 1 }
-func (p *opMessagePayloadType1) Name() string                 { return p.Identifer }
+func (p *opMessagePayloadType1) Name() string                 { return p.Identifier }
 func (p *opMessagePayloadType1) DB() string                   { return "" }
 func (p *opMessagePayloadType1) Documents() []*bsonx.Document { return p.Payload }
 func (p *opMessagePayloadType1) Serialize() []byte            { return nil }
@@ -65,26 +65,31 @@ func (m *opMessage) Serialize() []byte { return nil }
 //   - implement message interface
 //      - Serialize
 
-func NewOpMessage(moreToCome bool, document *bsonx.Document, items ...model.SequenceItem) Message {
+func NewOpMessage(moreToCome bool, documents []*bsonx.Document, items ...model.SequenceItem) Message {
 	msg := &opMessage{
 		header: MessageHeader{
 			OpCode:    OP_MSG,
 			RequestID: 19,
 		},
-		Flags: 1,
-		Items: []opMessageSection{
-			&opMessagePayloadType0{
-				PayloadType: 0,
-				Document:    document,
-			},
-		},
+		Items: make([]opMessageSection, len(documents)),
+	}
+
+	for idx := range documents {
+		msg.Items[idx] = &opMessagePayloadType0{
+			PayloadType: 0,
+			Document:    documents[idx],
+		}
+	}
+
+	if moreToCome {
+		msg.Flags = msg.Flags & 1
 	}
 
 	for idx := range items {
 		item := items[idx]
 		it := &opMessagePayloadType1{
 			PayloadType: 1,
-			Identifer:   item.Identifer,
+			Identifier:  item.Identifier,
 		}
 		for _, i := range item.Documents {
 			it.Size += int32(getDocSize(i))
@@ -95,6 +100,6 @@ func NewOpMessage(moreToCome bool, document *bsonx.Document, items ...model.Sequ
 	return msg
 }
 
-func (h *MessageHeader) parseMsgMessageBody(body []byte) (Message, error) {
+func (h *MessageHeader) parseMsgBody(body []byte) (Message, error) {
 	return nil, errors.New("op_message parsing not implemented")
 }
