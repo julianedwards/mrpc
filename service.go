@@ -79,7 +79,7 @@ func writeErrorReply(w io.Writer, err error) error {
 
 func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 	defer func() {
-		err := recovery.HandlePanicWithError(recover(), nil, "request handling")
+		err := recovery.HandlePanicWithError(recover(), nil, "connection handling")
 		if err != nil {
 			grip.Error(message.WrapError(err, "error during request handling"))
 			// Attempt to reply with the given deadline.
@@ -127,7 +127,7 @@ func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 			return
 		}
 
-		handler(ctx, conn, m)
+		go handler(ctx, conn, m)
 	}
 }
 
