@@ -1,6 +1,7 @@
 package mongowire
 
 import (
+	"context"
 	"io"
 
 	"github.com/pkg/errors"
@@ -8,15 +9,32 @@ import (
 
 const MaxInt32 = 2147483647
 
-func ReadMessage(reader io.Reader) (Message, error) {
+func ReadMessage(ctx context.Context, reader io.Reader) (Message, error) {
 	// read header
 	sizeBuf := make([]byte, 4)
-	n, err := reader.Read(sizeBuf)
-	if err != nil {
-		return nil, errors.WithStack(err)
+	type readResult struct {
+		n   int
+		err error
 	}
-	if n != 4 {
-		return nil, errors.Errorf("didn't read message size from socket, got %d", n)
+
+	doRead := func(readFinished chan readResult, out []byte) {
+		defer close(readFinished)
+		n, err := reader.Read(out)
+		readFinished <- readResult{n: n, err: err}
+	}
+
+	readFinished := make(chan readResult)
+	go doRead(readFinished, sizeBuf)
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case res := <-readFinished:
+		if res.err != nil {
+			return nil, errors.WithStack(res.err)
+		}
+		if res.n != 4 {
+			return nil, errors.Errorf("didn't read message size from socket, got %d", res.n)
+		}
 	}
 
 	header := MessageHeader{}
@@ -36,14 +54,20 @@ func ReadMessage(reader io.Reader) (Message, error) {
 	restBuf := make([]byte, header.Size-4)
 
 	for read := 0; int32(read) < header.Size-4; {
-		n, err := reader.Read(restBuf[read:])
-		if err != nil {
-			return nil, errors.WithStack(err)
+		readFinished = make(chan readResult)
+		go doRead(readFinished, restBuf)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case res := <-readFinished:
+			if res.err != nil {
+				return nil, errors.WithStack(res.err)
+			}
+			if res.n == 0 {
+				break
+			}
+			read += res.n
 		}
-		if n == 0 {
-			break
-		}
-		read += n
 	}
 
 	if len(restBuf) < 12 {
@@ -56,19 +80,31 @@ func ReadMessage(reader io.Reader) (Message, error) {
 	return header.Parse(restBuf[12:])
 }
 
-func SendMessage(m Message, writer io.Writer) error {
+func SendMessage(ctx context.Context, m Message, writer io.Writer) error {
 	buf := m.Serialize()
 
+	type writeRes struct {
+		n   int
+		err error
+	}
 	for {
-		written, err := writer.Write(buf)
-		if err != nil {
-			return errors.Wrap(err, "error writing to client")
+		writeFinished := make(chan writeRes)
+		go func() {
+			defer close(writeFinished)
+			n, err := writer.Write(buf)
+			writeFinished <- writeRes{n: n, err: err}
+		}()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case res := <-writeFinished:
+			if res.err != nil {
+				return errors.Wrap(res.err, "error writing message to client")
+			}
+			if res.n == len(buf) {
+				return nil
+			}
+			buf = buf[res.n:]
 		}
-
-		if written == len(buf) {
-			return nil
-		}
-
-		buf = buf[written:]
 	}
 }
