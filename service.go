@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/evergreen-ci/birch"
@@ -46,9 +43,6 @@ func (s *Service) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "problem listening on %s", s.addr)
 	}
 	defer l.Close()
-
-	ctx, cancel := context.WithCancel(ctx)
-	go handleSignals(ctx, cancel)
 
 	grip.Infof("listening for connections on %s", s.addr)
 
@@ -128,19 +122,5 @@ func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 		}
 
 		go handler(ctx, conn, m)
-	}
-}
-
-func handleSignals(ctx context.Context, cancel context.CancelFunc) {
-	defer recovery.LogStackTraceAndContinue("graceful shutdown")
-	defer cancel()
-	sig := make(chan os.Signal, 2)
-	signal.Notify(sig, syscall.SIGTERM, os.Interrupt)
-
-	select {
-	case <-sig:
-		grip.Debug("closing service after receiving signal")
-	case <-ctx.Done():
-		grip.Debug("closing service after context canceled")
 	}
 }
