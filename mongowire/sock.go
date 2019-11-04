@@ -10,22 +10,23 @@ import (
 const MaxInt32 = 2147483647
 
 func ReadMessage(ctx context.Context, reader io.Reader) (Message, error) {
-	// read header
-	sizeBuf := make([]byte, 4)
 	type readResult struct {
 		n   int
 		err error
 	}
 
+	// read header
+	sizeBuf := make([]byte, 4)
+
 	readFinished := make(chan readResult)
-	go func(ctx context.Context, out []byte) {
+	go func() {
 		defer close(readFinished)
-		n, err := reader.Read(out)
+		n, err := reader.Read(sizeBuf)
 		select {
 		case readFinished <- readResult{n: n, err: err}:
 		case <-ctx.Done():
 		}
-	}(ctx, sizeBuf)
+	}()
 	select {
 	case <-ctx.Done():
 		return nil, errors.WithStack(ctx.Err())
@@ -56,14 +57,14 @@ func ReadMessage(ctx context.Context, reader io.Reader) (Message, error) {
 
 	for read := 0; int32(read) < header.Size-4; {
 		readFinished = make(chan readResult)
-		go func(ctx context.Context, out []byte) {
+		go func() {
 			defer close(readFinished)
-			n, err := reader.Read(out)
+			n, err := reader.Read(restBuf)
 			select {
 			case readFinished <- readResult{n: n, err: err}:
 			case <-ctx.Done():
 			}
-		}(ctx, restBuf)
+		}()
 		select {
 		case <-ctx.Done():
 			return nil, errors.WithStack(ctx.Err())
