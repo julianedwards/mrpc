@@ -67,7 +67,8 @@ func writeErrorReply(w io.Writer, err error) error {
 	if err != nil {
 		doc.Append(birch.EC.String("errmsg", err.Error()))
 	}
-	reply := mongowire.NewReply(int64(0), int32(0), int32(0), int32(1), []*birch.Document{doc})
+	// TODO: handle OP_MSG replies for newer protocol versions.
+	reply := mongowire.NewReply(int64(0), int32(0), int32(0), int32(1), []birch.Document{*doc.Copy()})
 	_, err = w.Write(reply.Serialize())
 	return errors.Wrap(err, "could not write response")
 }
