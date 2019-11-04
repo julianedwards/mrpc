@@ -62,10 +62,11 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func writeErrorReply(w io.Writer, err error) error {
-	responseNotOk := birch.EC.Int32("ok", 0)
-	errorDoc := birch.EC.String("errmsg", err.Error())
-	doc := birch.NewDocument(responseNotOk, errorDoc)
-
+	responseNotOK := birch.EC.Int32("ok", 0)
+	doc := birch.NewDocument(responseNotOK)
+	if err != nil {
+		doc.Append(birch.EC.String("errmsg", err.Error()))
+	}
 	reply := mongowire.NewReply(int64(0), int32(0), int32(0), int32(1), []*birch.Document{doc})
 	_, err = w.Write(reply.Serialize())
 	return errors.Wrap(err, "could not write response")
@@ -77,7 +78,7 @@ func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 		if err != nil {
 			grip.Error(message.WrapError(err, "error during request handling"))
 			// Attempt to reply with the given deadline.
-			if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+			if deadlineErr := conn.SetDeadline(time.Now().Add(15 * time.Second)); deadlineErr != nil {
 				grip.Error(message.WrapError(err, "failed to set deadline on panic reply"))
 			} else if writeErr := writeErrorReply(conn, err); writeErr != nil {
 				grip.Error(message.WrapError(writeErr, "error writing reply after panic recovery"))
