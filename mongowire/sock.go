@@ -17,17 +17,15 @@ func ReadMessage(ctx context.Context, reader io.Reader) (Message, error) {
 		err error
 	}
 
-	doRead := func(ctx context.Context, readFinished chan readResult, out []byte) {
+	readFinished := make(chan readResult)
+	go func(ctx context.Context, out []byte) {
 		defer close(readFinished)
 		n, err := reader.Read(out)
 		select {
 		case readFinished <- readResult{n: n, err: err}:
 		case <-ctx.Done():
 		}
-	}
-
-	readFinished := make(chan readResult)
-	go doRead(ctx, readFinished, sizeBuf)
+	}(ctx, sizeBuf)
 	select {
 	case <-ctx.Done():
 		return nil, errors.WithStack(ctx.Err())
@@ -58,7 +56,14 @@ func ReadMessage(ctx context.Context, reader io.Reader) (Message, error) {
 
 	for read := 0; int32(read) < header.Size-4; {
 		readFinished = make(chan readResult)
-		go doRead(ctx, readFinished, restBuf)
+		go func(ctx context.Context, out []byte) {
+			defer close(readFinished)
+			n, err := reader.Read(out)
+			select {
+			case readFinished <- readResult{n: n, err: err}:
+			case <-ctx.Done():
+			}
+		}(ctx, restBuf)
 		select {
 		case <-ctx.Done():
 			return nil, errors.WithStack(ctx.Err())
